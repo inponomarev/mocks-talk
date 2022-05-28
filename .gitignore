@@ -20,3 +20,6 @@ src/main/asciidoc/*.png
 /old/
 /*.bat
 .asciidoctor
+/src/main/asciidoc/images/awaitility-fail.png
+/src/main/asciidoc/images/step1.png
+/src/main/asciidoc/images/step2.png
