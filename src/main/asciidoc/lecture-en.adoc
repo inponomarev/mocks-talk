@@ -403,7 +403,7 @@ digraph G {
 * -- It's too complicated to mock!
 * -- Hurray for containers!
 
-== Mocks vs TestContainers: функциональность
+== Mocks vs TestContainers: Functionality
 
 [cols="45a,10a,45a"]
 |===
@@ -416,8 +416,8 @@ image::vs.svg[]
 |
 [%step]
 [none]
-* image:thumbs-down.png[] Не гарантируют, что ведут себя так же, как настоящая система.
-* image:thumbs-down.png[] Написать bug-to-bug compatible мок сложнее, чем настоящую систему, никто и никогда этого не сделает.
+* image:thumbs-down.png[] Don't guarantee to behave the same as the real system.
+* image:thumbs-down.png[] Writing a bug-to-bug compatible mock is harder than the real system, no one ever does it.
 |
 |
 |===
@@ -950,7 +950,7 @@ try {
     service.awaitTermination(200, MILLISECONDS);
 }
 ----
-== Тест с TopologyTestDriver
+== Test with TopologyTestDriver
 [source,java]
 ----
 List<String> values = outputTopic.readValuesToList();
