@@ -1,0 +1,1307 @@
+= Mocks vs TestContainers
+Ivan Ponomarev
+:revealjs_theme: black
+:revealjs_customtheme: white_course.css
+:revealjs_slideNumber:
+:revealjs_history:
+:revealjs_progress:
+:encoding: UTF-8
+:lang: ru
+include::_doc_general_attributes.adoc[]
+:doctype: article
+:toclevels: 3
+:imagesdir: images
+:source-highlighter: highlightjs
+:highlightjsdir: highlight
+:icons: font
+:iconfont-remote!:
+:iconfont-name: font-awesome-4.7.0/css/font-awesome
+:revealjs_mouseWheel: true
+:revealjs_center: false
+:revealjs_transition: none
+:revealjs_width: 1600
+:revealjs_height: 900
+:stem: latexmath
+
+
+//== Часть 1. Введение
+:!figure-caption:
+
+[%notitle]
+== Who am  I
+
+[cols="30a,70a"]
+|===
+|image::ivan.jpg[]
+|
+
+Ivan Ponomarev
+
+* Staff Engineer @ Synthesized.io
+* Teaching Java at universities
+|===
+
+== Why I Decided to Make This Presentation?
+
+Kafka streams testing: A deep dive (Joker 2020, online)
+
+image::kafka_testing_deep_dive.png[{image-70-width}]
+
+== What the talk will be about
+
+* Integration tests
+
+* Personal experience
+
+== Modern integration test
+
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  layout="neato";
+  node[shape=box];
+  SUT[label="System\nUnder\nTest"];
+  
+  SUT->IS[style=invis];
+  SUT->ES[style=invis];
+  SUT->DB[style=invis];
+  SUT->Queue[style=invis];
+  SUT->Q1[style=invis];
+  SUT->Q2[style=invis];
+  
+  DB[shape=cylinder, style=invis];
+  Queue[label="Message\nbroker", shape=cylinder, style=invis];
+  IS[label="Own\nService", style=invis]
+  ES[label="External\nService", style=invis]
+  Q1[label="Redis", style=invis, shape=cylinder]
+  Q2[label="Some\nCloud\nDatabase", style=invis, shape=cylinder]
+}
+----
+
+== Modern integration test
+
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  layout="neato";
+  node[shape=box];
+  SUT[label="System\nUnder\nTest"];
+  
+  SUT->IS[style=invis];
+  SUT->ES[style=invis];
+  SUT->DB;
+  SUT->Queue[style=invis];
+  SUT->Q1[style=invis];
+  SUT->Q2[style=invis];
+  
+  DB[shape=cylinder];
+  Queue[label="Message\nbroker", shape=cylinder, style=invis];
+  IS[label="Own\nService", style=invis]
+  ES[label="External\nService", style=invis]
+  Q1[label="Redis", style=invis, shape=cylinder]
+  Q2[label="Some\nCloud\nDatabase", style=invis, shape=cylinder]
+}
+----
+
+
+== Modern integration test
+
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  layout="neato";
+  node[shape=box];
+  SUT[label="System\nUnder\nTest"];
+  
+  SUT->IS[style=invis];
+  SUT->ES[style=invis];
+  SUT->DB;
+  SUT->Queue;
+  SUT->Q1[style=invis];
+  SUT->Q2[style=invis];
+  
+  DB[shape=cylinder];
+  Queue[label="Message\nbroker", shape=cylinder];
+  IS[label="Own\nService", style=invis]
+  ES[label="External\nService", style=invis]
+  Q1[label="Redis", style=invis, shape=cylinder]
+  Q2[label="Some\nCloud\nDatabase", style=invis, shape=cylinder]
+}
+----
+
+== Modern integration test
+
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  layout="neato";
+  node[shape=box];
+  SUT[label="System\nUnder\nTest"];
+  
+  SUT->IS;
+  SUT->ES[style=invis];
+  SUT->DB;
+  SUT->Queue;
+  SUT->Q1[style=invis];
+  SUT->Q2[style=invis];
+  
+  DB[shape=cylinder];
+  Queue[label="Message\nbroker", shape=cylinder];
+  IS[label="Own\nService"]
+  ES[label="External\nService", style=invis]
+  Q1[label="Redis", style=invis, shape=cylinder]
+  Q2[label="Some\nCloud\nDatabase", style=invis, shape=cylinder]
+}
+----
+
+== Modern integration test
+
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  layout="neato";
+  node[shape=box];
+  SUT[label="System\nUnder\nTest"];
+  
+  SUT->IS;
+  SUT->ES;
+  SUT->DB;
+  SUT->Queue;
+  SUT->Q1[style=invis];
+  SUT->Q2[style=invis];
+  
+  DB[shape=cylinder];
+  Queue[label="Message\nbroker", shape=cylinder];
+  IS[label="Own\nService"]
+  ES[label="External\nService"]
+  Q1[label="Redis", style=invis, shape=cylinder]
+  Q2[label="Some\nCloud\nDatabase", style=invis, shape=cylinder]
+}
+----
+
+== Modern integration test
+
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  layout="neato";
+  node[shape=box];
+  SUT[label="System\nUnder\nTest"];
+  
+  SUT->IS;
+  SUT->ES;
+  SUT->DB;
+  SUT->Queue;
+  SUT->Q1;
+  SUT->Q2;
+  
+  DB[shape=cylinder];
+  Queue[label="Message\nbroker", shape=cylinder];
+  IS[label="Own\nService"]
+  ES[label="External\nService"]
+  Q1[label="Redis", shape=cylinder]
+  Q2[label="Some\nCloud\nDatabase", shape=cylinder]
+}
+----
+
+== What do we have?
+
+[cols="40a,10a,50a"]
+|===
+>.^|
+*Mocks*
+^.^|
+image::vs.svg[]
+<.^|
+*Real Systems*
+|===
+
+== Using mocks is like learning chemistry from cartoons!
+
+video::mock_chemistry.mp4[]
+
+https://twitter.com/amazing_physics/status/1479936122277048327
+
+== Real experiments are a different matter!
+
+[%notitle]
+== Real Experiment
+
+image::real_chemistry.jpg[canvas, size=cover]
+
+// https://www.youtube.com/watch?v=r-awC1lbmog
+
+== What Do We Have for Real Experiments?
+
+image::testcontainers_transparent.png[{image-60-width}]
+
+== TestContainers in Action
+
+[source,java]
+----
+GenericContainer redis = new GenericContainer(
+        DockerImageName.parse("redis:5.0.3-alpine"))
+        .withExposedPorts(6379);
+
+String address = redis.getHost();
+Integer port = redis.getFirstMappedPort();
+
+underTest = new RedisBackedCache(address, port);
+----
+
+== Set of Stereotypes
+
+[none]
+[%step]
+* -- Mocks -- They are unreliable
+* -- Let's raise everything in test containers and test it!
+* -- No need to use H2 for testing code that works on a database anymore!
+* -- And what about external services?.. you can't raise them in test containers...
+
+== Mocks of External Services
+
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  layout="neato";
+  node[shape=box];
+  SUT[label="System\nUnder\nTest"];
+
+  SUT->IS;
+  SUT->ES;
+  SUT->DB;
+  SUT->Queue;
+  SUT->Q1;
+  SUT->Q2;
+
+  DB[shape=cylinder];
+  Queue[label="Message\nbroker", shape=cylinder];
+  IS[label="Own\nService"]
+  ES[label="External\nService", style="filled"; fillcolor="#ffffcc"]
+  Q1[label="???"]
+  Q2[label="???"]
+}
+----
+
+== Mocks of External Services
+
+[cols="45a,10a,45a"]
+|===
+^.^|
+*Mocks*
+^.^|
+image::vs.svg[]
+^.^|
+*Real Systems*
+| image:thumbs-up.png[] We control the mock and can easily simulate all corner cases
+|
+| image:thumbs-down.png[] We don't control the external service and its functionality
+|===
+
+
+== Example from the book Humans vs. Computers 
+
+"Let's release from prison everyone who has not committed serious crimes"
+
+[source, java]
+----
+try {
+  murders = restClient.loadMurders();
+}
+catch (IOException e) {
+  logger.error(“failed to load”, e);
+  murders = emptyList();
+}
+----
+
+== WireMock Can
+
+simulate a response from a service to a request
+
+[plantuml]
+----
+@startuml
+skinparam dpi 260
+hide footbox
+Caller -> Mock: Request
+Mock--> Caller : Response
+@enduml
+----
+
+== WireMock can
+
+verify the calls made
+
+[plantuml]
+----
+@startuml
+skinparam dpi 260
+hide footbox
+Caller -> Mock: Request
+Mock -> Mock: Record & Verify
+Mock--> Caller : Response
+@enduml
+----
+
+== WireMock can
+
+"spy" by intercepting calls to the real service
+
+[plantuml]
+----
+@startuml
+skinparam dpi 260
+hide footbox
+Caller -> Mock: Request
+Mock -> Mock: Record & Verify
+Mock -> "Real System": Request
+
+"Real System"--> Caller : Response
+@enduml
+----
+
+
+== What About RDBMS/NoSQL/Message Brokers and Others?
+
+
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  layout="neato";
+  node[shape=box];
+  SUT[label="System\nUnder\nTest"];
+
+  SUT->IS;
+  SUT->ES;
+  SUT->DB;
+  SUT->Queue;
+  SUT->Q1;
+  SUT->Q2;
+
+  DB[shape=cylinder, style="filled"; fillcolor="#ffffcc"];
+  Queue[label="Message\nbroker", shape=cylinder, style="filled"; fillcolor="#ffffcc"];
+  IS[label="Own\nService"]
+  ES[label="External\nService"]
+  Q1[label="Redis", shape=cylinder, style="filled"; fillcolor="#ffffcc"]
+  Q2[label="Some\nCloud\nDatabase", shape=cylinder, style="filled"; fillcolor="#ffffcc"]
+}
+----
+
+
+== What About RDBMS/NoSQL/Message Brokers and Others?
+
+
+[none]
+* -- It's too complicated to mock!
+* -- Hurray for containers!
+
+== Mocks vs TestContainers: функциональность
+
+[cols="45a,10a,45a"]
+|===
+^.^|
+*Mocks*
+^.^|
+image::vs.svg[]
+^.^|
+*Testcontainers*
+|
+[%step]
+[none]
+* image:thumbs-down.png[] Не гарантируют, что ведут себя так же, как настоящая система.
+* image:thumbs-down.png[] Написать bug-to-bug compatible мок сложнее, чем настоящую систему, никто и никогда этого не сделает.
+|
+|
+|===
+
+== Mocks vs TestContainers: Functionality
+
+[cols="45a,10a,45a"]
+|===
+^.^|
+*Mocks*
+^.^|
+image::vs.svg[]
+^.^|
+*Testcontainers*
+|
+[none]
+* image:thumbs-down.png[] Don't guarantee to behave the same as the real system.
+* image:thumbs-down.png[] Writing a bug-to-bug compatible mock is harder than the real system, no one ever does it.
+|
+|
+image:thumbs-up.png[] This is the real system itself!
+|===
+
+== Mocks vs TestContainers: Ease of use and start-up speed
+
+[cols="45a,10a,45a"]
+|===
+^.^|
+*Mocks*
+^.^|
+image::vs.svg[]
+^.^|
+*Testcontainers*
+|
+[%step]
+[none]
+* image:thumbs-up.png[] Just a regular dependency
+* image:thumbs-up.png[] Part of the test, starts instantly
+|
+|
+
+|===
+
+== Mocks vs TestContainers: Ease of use and start-up speed
+
+image::bepatient.png[{image-100-width}]
+
+== Mocks vs TestContainers: Ease of use and start-up speed
+
+[cols="45a,10a,45a"]
+|===
+^.^|
+*Mocks*
+^.^|
+image::vs.svg[]
+^.^|
+*Testcontainers*
+|
+[none]
+* image:thumbs-up.png[] Just a regular dependency
+* image:thumbs-up.png[] Part of the test, starts instantly
+|
+|
+[none]
+* image:shrug.png[] Require Docker (OK, it's everywhere now)
+
+[%step]
+[none]
+* image:shrug.png[] Need to download the image (depends on size and internet speed)
+* image:shrug.png[] Need to start the container (from a few seconds to a couple of minutes)
+
+|===
+
+== TC Startup time
+
+image::startup.png[]
+
+== Nothing can be done if
+
+image:thumbs-down.png[] "I have a Mac M1!"
+
+[%notitle]
+== TC in Cloud
+image::tc_cloud.png[]
+
+== Convenience
+
+[cols="45a,10a,45a"]
+|===
+^.^|
+*Mocks*
+^.^|
+image::vs.svg[]
+^.^|
+*Testcontainers*
+| image:thumbs-up.png[] Fast and reliable tests are more desirable to run frequently and write more of
+|
+| image:thumbs-down.png[] "Scary" tests are too time-consuming to wait for and debug, making one want to skip their execution
+|===
+
+
+== Integration Mocks vs TestContainers
+[cols="45a,10a,45a"]
+|===
+^.^|
+*Mocks*
+^.^|
+image::vs.svg[]
+^.^|
+*Testcontainers*
+|
+[%step]
+[none]
+* image:thumbs-up.png[] white box (verification of calls from the system under test)
+* image:thumbs-up.png[] ability to simulate any state, including failures
+* image:thumbs-up.png[] possibility of synchronous execution (more on this later)
+|
+|
+|===
+
+== Integration Mocks vs TestContainers
+[cols="45a,10a,45a"]
+|===
+^.^|
+*Mocks*
+^.^|
+image::vs.svg[]
+^.^|
+*Testcontainers*
+|
+[none]
+* image:thumbs-up.png[] white box (verification of calls from the system under test)
+* image:thumbs-up.png[] ability to simulate any state, including failures
+* image:thumbs-up.png[] possibility of synchronous execution (more on this later)
+|
+|
+[none]
+* image:thumbs-down.png[] difficult to "force" the system into the desired state
+
+[%step]
+[none]
+* image:thumbs-down.png[] difficult to verify which commands were called
+|===
+
+
+== Availability
+
+[cols="45a,10a,45a"]
+|===
+^.^|
+*Mocks*
+^.^|
+image::vs.svg[]
+^.^|
+*Testcontainers*
+| image:shrug.png[] Sometimes they are available, but most often they are not.
+|
+| image:thumbs-up.png[] Can be used for anything that can be run in containers.
+|===
+
+
+== Example № 1. JedisMock and Call Verification
+
+https://github.com/fppt/jedis-mock
+
+* reimplementation of Redis in Java (works at the network protocol level)
+
+[source,java]
+----
+//This binds mock redis server to a random port
+RedisServer server = RedisServer
+        .newRedisServer()
+        .start();
+
+//Jedis connection:
+Jedis jedis = new Jedis(server.getHost(), server.getBindPort());
+----
+
+== JedisMock
+
+* Tested with Comparison tests (running identical scenarios on Jedis-Mock and on containerized Redis)
+
+image::comparison.png[{image-60-width}]
+
+== JedisMock
+
+As of June 2022, supports 103 out of 225 commands (46%)
+
+image::supported_redis_operations.png[]
+
+== JedisMock
+
+Bugs (behavior differing from the real Redis) are constantly being patched
+
+image::jedis_mock_bugs.png[{image-70-width}]
+
+== Why JedisMock is Needed
+A regular Maven dependency
+
+[source,java]
+----
+//This binds mock redis server to a random port
+RedisServer server = RedisServer
+        .newRedisServer()
+        .start();
+
+//Jedis connection:
+Jedis jedis = new Jedis(server.getHost(), server.getBindPort());
+----
+
+== RedisCommandInterceptor
+
+[source,java]
+----
+RedisServer server = RedisServer.newRedisServer()
+  .setOptions(ServiceOptions.withInterceptor((state, cmd, params) -> {
+    if ("get".equalsIgnoreCase(cmd)) {
+      //explicitly specify the response
+      return Response.bulkString(Slice.create("MOCK_VALUE"));
+    } else {
+      //delegate to the mock
+      return MockExecutor.proceed(state, cmd, params);
+    }
+})).start();
+----
+
+
+== RedisCommandInterceptor
+
+[source,java]
+----
+RedisServer server = RedisServer.newRedisServer()
+  .setOptions(ServiceOptions.withInterceptor((state, cmd, params) -> {
+    if ("echo".equalsIgnoreCase(cmd)) {
+      //check the request
+      assertEquals("hello", params.get(0).toString());
+    }
+    //delegate to the mock
+    return MockExecutor.proceed(state, cmd, params);
+})).start();
+----
+
+== RedisCommandInterceptor
+
+[source,java]
+----
+RedisServer server = RedisServer.newRedisServer()
+  .setOptions(ServiceOptions.withInterceptor((state, cmd, params) -> {
+    if ("echo".equalsIgnoreCase(cmd)) {
+      //simulate a failure
+      return MockExecutor.breakConnection(state);
+    } else {
+      //delegate to the mock
+      return MockExecutor.proceed(state, cmd, params);
+    }
+})).start();
+----
+
+
+== Working as a Test Proxy
+
+[plantuml]
+----
+@startuml
+skinparam dpi 260
+hide footbox
+Caller -> "JedisMock": Request
+"JedisMock" -> "JedisMock": Record & Verify
+"JedisMock" -> "Redis": Request
+"Redis"--> Caller : Response
+@enduml
+----
+
+
+== Conclusions on Jedis-Mock
+
+[none]
+[%step]
+* image:index_up.png[] For most Redis testing tasks, TestContainers works.
+* image:index_up.png[] But if you want to verify the behavior of your own system or study it in situations when Redis itself fails -- JedisMock is helpful.
+
+== Example №2. Kafka Streams TopologyTestDriver and the Hell of Asynchronous Testing
+
+[cols="45a,10a,45a"]
+|===
+>.^|
+[graphviz]
+----
+digraph G {
+graph [ dpi = 180 ];
+rankdir="LR";
+node[shape=rectangle, style=rounded]
+Kafka;
+Kafka[shape="none",label="",image="src/main/asciidoc/images/kafka-logo.png"];
+
+}
+----
+^.^|image::vs.svg[]
+<.^|
+[graphviz]
+----
+digraph G {
+graph [ dpi = 180 ];
+rankdir="LR";
+node[shape=rectangle, style=rounded]
+TopologyTestDriver;
+}
+----
+|===
+
+== Kafka streams testing: A deep dive (Joker 2020, online)
+
+image::kafka_testing_deep_dive.png[{image-70-width}]
+
+== TopologyTestDriver
+
+[none]
+* image:thumbs-up.png[] Simple (just a regular dependency)
+* image:thumbs-up.png[] Fast
+* image:thumbs-up.png[] Convenient (good API for Arrange and Assert)
+
+== The Main Difference:
+
+[cols="45a,10a,45a"]
+|===
+^.^|
+*TopologyTestDriver*
+^.^|
+image::vs.svg[]
+^.^|
+*Real Kafka*
+|
+Works *synchronously* (single thread and event loop, like in a browser)
+|
+|
+Works *asynchronously* in multiple threads on multiple containers
+|===
+
+== Thought Experiment: Limitations of Asynchronous Tests
+
+[none]
+* We entered "ping" and expect the system to return _a single_ response "pong".
+
+[%step]
+[none]
+* image:yellow_circle.png[] 2 seconds. No response.
+* image:yellow_circle.png[] 3 seconds. No response.
+* image:checkmark.png[] 4 seconds. "pong". Are we done?
+* image:checkmark.png[] 5 seconds. Silence.
+* image:checkmark.png[] 6 seconds. Silence.
+* image:cross_mark.png[] 7 seconds. "boom!"
+
+== The Problem with Polling
+
+[source,java]
+----
+//5 seconds?? maybe 6? maybe 4?
+while (!(records = consumer.poll(Duration.ofSeconds(5))).isEmpty()) {
+    for (ConsumerRecord<String, String> rec : records) {
+        values.add(rec.value());
+    }
+}
+----
+
+Fundamental problem: is this the final result, or have we not waited long enough?
+
+
+== Awaitility: A partial solution to the problem with asynchronous testing
+
+[source,java]
+-----
+Awaitility.await().atMost(10, SECONDS).until(() ->
+                  { // returns true
+                  });
+-----
+
+image:yellow_circle.png[]
+
+[plantuml,step1,png]
+----
+@startuml
+!pragma teoz true
+skinparam dpi 200
+hide footbox
+-> Awaitility: until
+activate Awaitility
+{start} Awaitility -> conditionEvaluator: call                                               .
+conditionEvaluator --> Awaitility: false
+
+@enduml
+----
+
+== Awaitility: A partial solution to the problem with asynchronous testing
+
+[source,java]
+-----
+Awaitility.await().atMost(10, SECONDS).until(() ->
+                  { // returns true
+                  });
+-----
+
+image:yellow_circle.png[]
+
+[plantuml,step2,png]
+----
+@startuml
+!pragma teoz true
+skinparam dpi 200
+hide footbox
+-> Awaitility: until
+activate Awaitility
+{start} Awaitility -> conditionEvaluator: call                                               .
+conditionEvaluator --> Awaitility: false
+Awaitility -> conditionEvaluator: call
+conditionEvaluator --> Awaitility: false
+
+@enduml
+----
+
+== Awaitility: A partial solution to the problem with asynchronous testing
+
+[source,java]
+-----
+Awaitility.await().atMost(10, SECONDS).until(() ->
+                  { // returns true
+                  });
+-----
+
+image:checkmark.png[]
+
+[plantuml, awaitility-pass, png]
+----
+@startuml
+!pragma teoz true
+skinparam dpi 200
+hide footbox
+-> Awaitility: until
+activate Awaitility
+{start} Awaitility -> conditionEvaluator: call                                               .
+conditionEvaluator --> Awaitility: false
+...
+
+Awaitility -> conditionEvaluator: call
+{end} conditionEvaluator --> Awaitility: **true**
+{start} <-> {end} : < 10 s
+<-- Awaitility
+deactivate Awaitility
+@enduml
+----
+
+== Awaitility: Test failure
+
+[source,java]
+-----
+Awaitility.await().atMost(10, SECONDS).until(()->
+                  { // returns false for more than 10 seconds
+                  });
+-----
+
+image::cross_mark.png[]
+
+[plantuml, awaitility-fail, png]
+----
+@startuml
+!pragma teoz true
+skinparam dpi 180
+hide footbox
+-> Awaitility: until
+activate Awaitility
+{start} Awaitility -> conditionEvaluator: call                                               .
+conditionEvaluator --> Awaitility: false
+...
+
+Awaitility -> conditionEvaluator: call
+{end} conditionEvaluator --> Awaitility: **false**
+{start} <-> {end} : > 10 s
+[x<-- Awaitility: ConditionTimeoutException
+deactivate Awaitility
+@enduml
+----
+== Awaitility DSL Capabilities
+
+[%step]
+* `atLeast` (should not happen before)
+* `atMost` (should not happen after)
+* `during` (should occur throughout the interval)
+* polling period:
+** constant (1, 2, 3, 4...)
+** Fibonacci (1, 2, 3, 5...)
+** exponential (1, 2, 4, 8...)
+* *Awaitility speeds up asynchronous tests but does not overcome the fundamental problem of asynchronous tests*
+
+== Remind you of something?
+
+* Selenium `WebDriverWait`
+* Selenide's implicit wait
+
+image::selenide_logo.png[]
+
+
+== Problems with Awaitility
+
+* No guarantees => Flakiness
+* We enter the slippery path of concurrent Java programming
+
+== Real Test with Awaitility: Part 1
+
+[source,java]
+----
+List<String> actual = new CopyOnWriteArrayList<>();
+ExecutorService service = Executors.newSingleThreadExecutor();
+Future<?> consumingTask = service.submit(() -> {
+  while (!Thread.currentThread().isInterrupted()) {
+    ConsumerRecords<String, String> records =
+      consumer.poll(Duration.ofMillis(100));
+    for (ConsumerRecord<String, String> rec : records) {
+      actual.add(rec.value());
+}}});
+----
+
+== Real Test with Awaitility: Part 2
+
+[source,java]
+----
+try {
+  Awaitility.await().atMost(5, SECONDS)
+           .until(() -> List.of("A", "B").equals(actual));
+} finally {
+    consumingTask.cancel(true);
+    service.awaitTermination(200, MILLISECONDS);
+}
+----
+== Тест с TopologyTestDriver
+[source,java]
+----
+List<String> values = outputTopic.readValuesToList();
+Assertions.assertEquals(List.of("A", "B"), values);
+----
+
+== What's the Catch??
+
+[%step]
+* synchronous nature and lack of caching => different behavior
+* it's possible to construct simple code examples that pass the "green" test on TTD, but operate completely incorrectly on a real cluster
+
+== Conclusions on KafkaStreams:
+
+[%step]
+[none]
+* image:index_up.png[] You still can't do without the help of TopologyTestDriver
+* image:index_up.png[] But it's important to understand the limitations of this technology and aspects in which it doesn't work the same as a real cluster
+* image:shrug.png[] Failure on TTD means the code is bad. Successful execution on TTD doesn't mean the code is good.
+* image:index_up.png[] If necessary, a small number of tests are conducted on a containerized cluster.
+
+== Story №3. Apache Beam: Mock as One of the Supported Backends
+
+image::beam_logo.png[{image-30-width}]
+
+* Apache Beam is a unified programming model to define and execute data processing pipelines, including ETL, batch and stream (continuous) processing.
+
+* SDKs: Java, Python, Go
+
+== Apache Beam Runners
+
+[cols="50a,50a"]
+|===
+|
+* Runners:
+** Apache Flink,
+** Apache Nemo,
+** Apache Samza,
+** Apache Spark,
+** Google Cloud Dataflow,
+** Hazelcast Jet,
+** *Direct Runner*
+|
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  node[shape=rect,style=rounded];
+  {rank = same; A; B}
+  A[label="Client code"];
+  B[label="Apache Beam"]
+
+  C[label="Backend 1"];
+  D[label="Backend 2"];
+  E[label="Direct Runner"; style="rounded,filled"; fillcolor="#ffffcc"];
+  A -> B;
+  B -> C[arrowhead=none];
+  B -> D[arrowhead=none];
+  B -> E[arrowhead=none];
+}
+----
+
+`--runner=DirectRunner`
+|===
+== Mock Backend Pattern
+
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  node[shape=rect,style=rounded];
+  {rank = same; A; B}
+  A[label="Client code"];
+  B[label="Abstraction"]
+
+  C[label="Backend 1"];
+  D[label="Backend 2"];
+  E[label="Mock Backend"; style="rounded,filled"; fillcolor="#ffffcc"];
+  A -> B;
+  B -> C[arrowhead=none];
+  B -> D[arrowhead=none];
+  B -> E[arrowhead=none];
+}
+----
+
+== Sets of Functional Capabilities
+
+[cols="40a,60a"]
+|===
+|
+image::beam_backends.svg[]
+|
+|===
+
+== Matrix of Supported Features (Fragment)
+
+[cols="40a,60a"]
+|===
+|
+image::beam_backends.svg[]
+|
+image::beam_capability_matrix.png[]
+|===
+
+
+
+== Direct Runner
+
+[cols="40a,60a"]
+|===
+|
+image::beam_direct.svg[]
+
+|
+_"Direct Runner performs additional checks to ensure that users do not rely on semantics that are not guaranteed by the model... Using the Direct Runner helps ensure that pipelines are robust across different Beam runners."_
+|===
+
+== Apache Beam's Direct Runner
+
+[%step]
+[none]
+* image:index_up.png[] Failure on Direct Runner means the code is bad.
+* image:shrug.png[] Successful execution on Direct Runner doesn't mean the code is good.
+* image:shrug.png[] How to test Google Cloud Dataflow without Google Cloud is beyond me.
+
+== Example №4. Celesta: Not rushing to give up on H2
+
+[cols="30a,70a"]
+|===
+.^|
+image::celesta_duke.png[]
+.^|
+[%step]
+* https://github.com/CourseOrchestra/celesta
+* A lightweight way to develop applications based on relational databases
+* An alternative to the "ORM + migrator" combination
+|===
+
+== Celesta
+
+[cols="30a,70a"]
+|===
+.^|image::celesta_duke.png[]
+.^|
+[%step]
+* *Database-first*: the user defines the desired database structure, Celesta generates data access API and handles automatic migration.
+* *Database-agnostic*: table and view structures are described in CelestaSQL, which is then transpiled into one of the supported dialects.
+|===
+
+== Celesta
+
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  node[shape=rect,style=rounded];
+  {rank = same; A; B}
+  A[label="Client code"];
+  B[label="Celesta"]
+
+  C[label="PostgreSQL"];
+  D[label="Oracle"];
+  E[label="MSSQL"];
+  F[label="Firebird"];
+  G[label="H2"; style="rounded,filled"; fillcolor="#ffffcc"];
+  A -> B;
+  B -> C[arrowhead=none];
+  B -> D[arrowhead=none];
+  B -> E[arrowhead=none];
+  B -> F[arrowhead=none];
+  B -> G[arrowhead=none];
+}
+----
+
+== Celesta
+[cols="40a,60a"]
+|===
+.^|
+image::celesta_backends.svg[]
+.^|
+[none]
+* 5 databases, incompatible in details
+|===
+
+
+== Celesta
+
+[cols="40a,60a"]
+|===
+.^|
+image::celesta_sql.svg[]
+.^|
+[%step]
+* CelestaSQL is *transpiled* into specific dialects.
+* A *subset* of features is supported.
+* Celesta itself is tested with *Comparison tests* (running identical scenarios on all types of databases).
+|===
+
+== Celesta Comparison Tests
+
+image::comparison-celesta.png[{image-70-width}]
+
+== Celesta
+[none]
+* Works on H2 => will work on PostgreSQL, MS SQL, etc.
+
+== Celesta
+
+[none]
+* Works on H2 => will work on PostgreSQL, MS SQL, etc.
+* Mock Backend the right way!
+
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  node[shape=rect,style=rounded];
+  {rank = same; A; B}
+  A[label="Client code"];
+  B[label="Abstraction"]
+
+  C[label="Backend 1"];
+  D[label="Backend 2"];
+  E[label="Mock Backend"; style="rounded,filled"; fillcolor="#ffffcc"];
+  A -> B;
+  B -> C[arrowhead=none];
+  B -> D[arrowhead=none];
+  B -> E[arrowhead=none];
+}
+----
+
+
+== In-Memory H2 Capabilities
+
+[%step]
+[none]
+* image:thumbs-up.png[] Starts with an empty database instantly
+* image:thumbs-up.png[] Migrates instantly
+* image:thumbs-up.png[] Incoming requests are easily traced +
+(`SET TRACE_LEVEL_SYSTEM_OUT 2`)
+* image:thumbs-up.png[] After the test, the state is "forgotten"
+
+== CelestaTest: Arrange
+
+[source,java]
+----
+@CelestaTest
+class OrderDaoTest {
+  OrderDao orderDao = new OrderDao();
+  CustomerCursor customer;
+  ItemCursor item;
+----
+
+== CelestaTest: Arrange
+
+[source,java]
+----
+@CelestaTest
+class OrderDaoTest {
+  OrderDao orderDao = new OrderDao();
+  CustomerCursor customer;
+  ItemCursor item;
+
+  @BeforeEach
+  void setUp(CallContext ctx) {
+    customer = new CustomerCursor(ctx);
+    customer.setName("John Doe")
+                 .setEmail("john@example.com").insert();
+
+    item = new ItemCursor(ctx);
+    item.setId("12345")
+           .setName("cheese").setDefaultPrice(42).insert();
+  }
+----
+
+
+== CelestaTest: Local arrange
+
+[source,java]
+----
+@Test
+void orderedItemsMethodReturnsAggregatedValues(CallContext ctx)
+    throws Exception {
+  //ARRANGE
+  ItemCursor item2 = new ItemCursor(ctx);
+  item2.setId("2")
+    .setName("item 2").insert();
+
+  OrderCursor orderCursor = new OrderCursor(ctx);
+  orderCursor.setId(null)
+    .setItemId(item.getId())
+    .setCustomerId(customer.getId())
+    .setQuantity(1).insert();
+
+  //and so on
+----
+
+== CelestaTest: Act & Assert
+
+[source,java]
+----
+//ACT
+List<ItemDto> result = orderDao.getItems(ctx);
+
+//ASSERT
+Approvals.verifyJson(new ObjectMapper()
+  .writer().writeValueAsString(result));
+----
+
+
+== CelestaTest
+[%step]
+[none]
+* image:thumbs-up.png[] Works instantly
+* image:thumbs-up.png[] Creates an empty database with the required structure for each test
+* image:thumbs-up.png[] Encourages writing a large number of tests for all database-related logic
+* image:shrug.png[] The price we pay is the limitation of functionality within what Celesta supports.
+
+== Conclusions on TestContainers
+
+[%step]
+[none]
+* image:index_up.png[] Can pose problems with startup speed and developer machine configuration.
+* image:index_up.png[] Real services are "black boxes," and it's difficult to force them into the desired state.
+* image:index_up.png[] Integration tests with "real" services are asynchronous, with insurmountable difficulties. These difficulties need to be understood.
+
+== Conclusions on Mocks
+
+[%step]
+[none]
+* image:index_up.png[] Specialized mocks are easier to connect, start, and execute faster.
+* image:index_up.png[] Mocks have special functionality that facilitates testing.
+* image:index_up.png[] Mocks do not behave the same way as the real system. This fact needs to be understood and accepted.
+* image:index_up.png[] For your system, mocks may simply not exist.
+
+
+== General Conclusions
+
+[%step]
+[none]
+* image:index_up.png[] When forming a testing strategy, one should rely not on stereotypes but on a deep understanding of the system's characteristics and available tools. The strategy will be different every time!
+* image:index_up.png[] The testability of the system as a whole should be one of the criteria when choosing technologies.
+
+
+== The Most Important Conclusion
+
+image:index_up.png[] You should use both mocks and containers, +
+but above all, use your own head. +
+ +
+ +
+
+icon:envelope[size=lg] ivan@synthesized.io
+
+icon:twitter[size=lg] @inponomarev
