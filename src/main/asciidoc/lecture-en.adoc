@@ -22,9 +22,7 @@ include::_doc_general_attributes.adoc[]
 :revealjs_width: 1600
 :revealjs_height: 900
 :stem: latexmath
-
-
-//== Часть 1. Введение
+:sectnums!:
 :!figure-caption:
 
 [%notitle]
@@ -325,7 +323,7 @@ image::vs.svg[]
 
 *Gojko Adzic*, Humans vs Computers, 2017
 
-"Let's release from prison everyone who has not committed serious crimes"
+"Let's release from prisons everyone who has not committed serious crimes"
 
 [source, java]
 ----
@@ -333,7 +331,7 @@ try {
   murders = restClient.loadMurders();
 }
 catch (IOException e) {
-  logger.error(“failed to load”, e);
+  logger.error("failed to load", e);
   murders = emptyList();
 }
 ----
