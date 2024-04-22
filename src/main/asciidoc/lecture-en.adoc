@@ -41,15 +41,12 @@ Ivan Ponomarev
 
 == Why I Decided to Make This Presentation?
 
-Kafka streams testing: A deep dive (Joker 2020, online)
+[%step]
+* A am a user and enthusiast of TestContainers library since 2016
+* However, quite often I argue with engineers who consider TestContainers to be an ultimate solution for every problem
+* I would like to share some insights based on my personal experience in integration testing in Java
+* The takeaways must be useful not just for Java/Kotlin developers
 
-image::kafka_testing_deep_dive.png[{image-70-width}]
-
-== What the talk will be about
-
-* Integration tests
-
-* Personal experience
 
 == Modern integration test
 
@@ -313,9 +310,9 @@ scale=1.5;
 image::vs.svg[]
 ^.^|
 *Real Systems*
-| image:thumbs-up.png[] We control the mock and can easily simulate all corner cases
+| image:thumbs-up.png[] We have control over the mock and can easily simulate all corner cases.
 |
-| image:thumbs-down.png[] We don't control the external service and its functionality
+| image:thumbs-down.png[] We lack control over the external service and its functionality.
 |===
 
 
@@ -432,8 +429,8 @@ image::vs.svg[]
 |
 [%step]
 [none]
-* image:thumbs-down.png[] No guarantees to behave the same as the real system.
-* image:thumbs-down.png[] Writing a bug-to-bug compatible mock is harder than to write the real system, no one ever does it.
+* image:thumbs-down.png[] No guarantee of replicating the behavior of the real system.
+* image:thumbs-down.png[] Writing a mock that is bug-to-bug compatible is more challenging than building the actual system, and rarely achieved.
 |
 |
 |===
@@ -450,8 +447,8 @@ image::vs.svg[]
 *Testcontainers*
 |
 [none]
-* image:thumbs-down.png[] Don't guarantee to behave the same as the real system.
-* image:thumbs-down.png[] Writing a bug-to-bug compatible mock is harder than the real system, no one ever does it.
+* image:thumbs-down.png[] No guarantee of replicating the behavior of the real system.
+* image:thumbs-down.png[] Writing a mock that is bug-to-bug compatible is more challenging than building the actual system, and rarely achieved.
 |
 |
 image:thumbs-up.png[] This is the real system itself!
@@ -532,9 +529,9 @@ image::tc_cloud.png[]
 image::vs.svg[]
 ^.^|
 *Testcontainers*
-| image:thumbs-up.png[] If tests are fast and reliable, one wants to run them more often and write more of them
+| image:thumbs-up.png[] Fast and reliable tests make one run them more often and write more of them
 |
-| image:thumbs-down.png[] "Heavy" tests are too time-consuming to run and debug, making one want to skip their execution
+| image:thumbs-down.png[] "Heavy" tests are too time-consuming to run and debug, making one want to skip their execution.
 |===
 
 
@@ -568,17 +565,17 @@ image::vs.svg[]
 *Testcontainers*
 |
 [none]
-* image:thumbs-up.png[] white box (verification of calls from the system under test)
-* image:thumbs-up.png[] ability to simulate any state, including failures
-* image:thumbs-up.png[] possibility of synchronous execution (more on this later)
+* image:thumbs-up.png[] Provide white-box testing (enables verification of calls from the system under test).
+* image:thumbs-up.png[] Allow simulation of any state, including failures, facilitating testing of corner cases.
+* image:thumbs-up.png[] Support synchronous execution (more details to follow).
 |
 |
 [none]
-* image:thumbs-down.png[] difficult to "force" the system into the desired state
+* image:thumbs-down.png[] Challenges in setting up the system in the desired state
 
 [%step]
 [none]
-* image:thumbs-down.png[] difficult to verify which commands were called
+* image:thumbs-down.png[] Difficulties in verifying which commands were called.
 |===
 
 
@@ -756,6 +753,8 @@ TopologyTestDriver;
 == Kafka streams testing: A deep dive (Joker 2020, online)
 
 image::kafka_testing_deep_dive.png[{image-70-width}]
+
+https://www.confluent.io/blog/testing-kafka-streams/
 
 == TopologyTestDriver
 
@@ -935,27 +934,25 @@ deactivate Awaitility
 ** exponential (1, 2, 4, 8...)
 * *Awaitility speeds up asynchronous tests but does not overcome the fundamental problem of asynchronous tests*
 
-== Remind you of something?
+== Meanwhile, in browser automation...
 
-* Selenium `WebDriverWait`
-* Selenide's implicit wait
-
-image::selenide_logo.png[]
-
+* Modern frameworks, such as Selenide or Playwright provide implicit waits for conditions to be met.
 
 == Problems with Awaitility
 
-* No guarantees => Flakiness
+* Arbitrary choice of waiting times leads to flakiness
 * We enter the slippery path of concurrent Java programming
 
 == Real Test with Awaitility: Part 1
 
 [source,java]
 ----
+//This must be a thread-safe data structure!
 List<String> actual = new CopyOnWriteArrayList<>();
 ExecutorService service = Executors.newSingleThreadExecutor();
 Future<?> consumingTask = service.submit(() -> {
-  while (!Thread.currentThread().isInterrupted()) {
+    //We must take into account the cooperative termination!
+    while (!Thread.currentThread().isInterrupted()) {
     ConsumerRecords<String, String> records =
       consumer.poll(Duration.ofMillis(100));
     for (ConsumerRecord<String, String> rec : records) {
@@ -971,6 +968,7 @@ try {
   Awaitility.await().atMost(5, SECONDS)
            .until(() -> List.of("A", "B").equals(actual));
 } finally {
+    //We should not forget to finalize the execution even in case of errors!
     consumingTask.cancel(true);
     service.awaitTermination(200, MILLISECONDS);
 }
@@ -982,11 +980,11 @@ List<String> values = outputTopic.readValuesToList();
 Assertions.assertEquals(List.of("A", "B"), values);
 ----
 
-== What's the Catch??
+== What's the pitfall??
 
 [%step]
-* synchronous nature and lack of caching => different behavior
-* it's possible to construct simple code examples that pass the "green" test on TTD, but operate completely incorrectly on a real cluster
+* synchronous nature and lack of caching lead to differences in behavior
+* it's possible to construct simple code examples that pass the "green" test on TTD, but operate completely incorrectly on a real cluster (refer to https://www.confluent.io/blog/testing-kafka-streams/)
 
 == Conclusions on KafkaStreams:
 
@@ -1293,6 +1291,32 @@ Approvals.verifyJson(new ObjectMapper()
 * image:thumbs-up.png[] Creates an empty database with the required structure for each test
 * image:thumbs-up.png[] Encourages writing a large number of tests for all database-related logic
 * image:shrug.png[] The price we pay is the limitation of functionality within what Celesta supports.
+
+== Using the spy JDBC Driver
+
+Instead of
+
+[source]
+jdbc:postgresql://host/database
+
+use
+
+[source]
+jdbc:log4jdbc:postgresql://host/database
+
+[plantuml]
+----
+@startuml
+skinparam dpi 260
+hide footbox
+Caller -> "Log4JDBC": Request
+"Log4JDBC" -> : Log the request
+"Log4JDBC" -> "JDBC driver": Request
+@enduml
+----
+
+
+
 
 == Conclusions on TestContainers
 
