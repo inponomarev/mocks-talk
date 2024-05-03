@@ -503,3 +503,8 @@ section.title {
 ul.none {
   list-style: none;
 }
+
+
+table, tr, td, th {
+  border: none !important;
+}
