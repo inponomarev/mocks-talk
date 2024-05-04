@@ -43,9 +43,11 @@ Ivan Ponomarev
 
 [%step]
 * A am a user and enthusiast of TestContainers library since 2016
-* However, quite often I argue with engineers who consider TestContainers to be an ultimate solution for every problem
-* I would like to share some insights based on my personal experience in integration testing in Java
-* The takeaways must be useful not just for Java/Kotlin developers
+* However, quite often I argue with engineers who consider TestContainers to be +
+an ultimate solution for every problem
+* I would like to share some insights based on my personal experience +
+in integration testing in Java/Kotlin
+* However, the takeaways of this talk must be useful not just for Java/Kotlin developers
 
 
 == Modern integration test
@@ -223,26 +225,23 @@ image::vs.svg[]
 *Real Systems*
 |===
 
-== Using mocks is like learning chemistry from cartoons!
+== Using mocks is like learning chemistry from cartoons...
 
 video::mock_chemistry.mp4[]
 
 https://twitter.com/amazing_physics/status/1479936122277048327
 
-== Real experiments are a different matter!
+== Nothing beats a real experiment, though...
 
-[%notitle]
-== Real Experiment
-
-image::real_chemistry.jpg[canvas, size=cover]
+image::real_chemistry.jpg[]
 
 // https://www.youtube.com/watch?v=r-awC1lbmog
 
-== What Do We Have for Real Experiments?
+== What do we have for Real Experiments?
 
 image::testcontainers-logo.svg[{image-60-width}]
 
-== What Do We Have for Real Experiments?
+== What do we have for Real Experiments?
 
 image::testcontainers-logo.svg[{image-60-width}]
 
@@ -250,7 +249,7 @@ image::testcontainers-logo.svg[{image-60-width}]
 
 image::tc_support.png[]
 
-== TestContainers in Action
+== TestContainers in action
 
 [source,java]
 ----
@@ -264,16 +263,17 @@ Integer port = redis.getFirstMappedPort();
 underTest = new RedisBackedCache(address, port);
 ----
 
-== Set of Stereotypes
+== Set of stereotypes
 
 [none]
 [%step]
 * -- Mocks are unreliable
 * -- Let's run everything in test containers and test it!
 * -- Using H2 database for testing is an outdated practice!
-* -- And what about external services?.. you can't run them in test containers...
+* ... we will address all them later, +
+but first let's consider the case of external REST/gRPC services
 
-== Mocks of External Services
+== Mocks of external services
 
 [graphviz]
 ----
@@ -300,7 +300,7 @@ scale=1.5;
 }
 ----
 
-== Mocks of External Services
+== Mocks of external services
 
 [cols="45a,10a,45a"]
 |===
@@ -310,13 +310,20 @@ scale=1.5;
 image::vs.svg[]
 ^.^|
 *Real Systems*
-| image:thumbs-up.png[] We have control over the mock and can easily simulate all corner cases.
+| image:thumbs-up.png[] We have control over the mock and can easily simulate all the corner cases.
+
+
+
 |
 | image:thumbs-down.png[] We lack control over the external service and its functionality.
+
+| image:wiremock.svg[] image:mountebank.png[]
+|
+|
 |===
 
 
-== Example from the book Humans vs. Computers 
+== The importance of proper testing of corner cases
 
 *Gojko Adzic*, Humans vs Computers, 2017
 
@@ -333,7 +340,10 @@ catch (IOException e) {
 }
 ----
 
+
 == WireMock features
+
+image::wiremock.svg[]
 
 Simulate a response from the service
 
@@ -413,8 +423,8 @@ digraph G {
 
 
 [none]
-* -- It's too complicated to mock!
-* -- Hurray for containers!
+* -- They are too complicated to mock!
+* -- Hurray for Testcontainers!
 
 == Mocks vs TestContainers: compatibility
 
@@ -510,14 +520,16 @@ image::startup.png[]
 
 == Worst situation
 
-image:thumbs-down.png[] "I have Mac M1 and the container is not compatible!"
+[none]
+* image:thumbs-down.png[] "I have a laptop with an ARM-based CPU and the Docker image is not compatible!"
 
-[%notitle]
+
 == Testcontainers Cloud
 image::tc_cloud.png[]
 
-* Paid service
-* Requires good Internet connection (won't work on train)
+[none]
+* image:shrug.png[] Paid service
+* image:shrug.png[] Requires good Internet connection (won't work on a train)
 
 == Convenience
 
@@ -547,9 +559,9 @@ image::vs.svg[]
 |
 [%step]
 [none]
-* image:thumbs-up.png[] white box (verification of calls from the system under test)
-* image:thumbs-up.png[] ability to simulate any state, including failures
-* image:thumbs-up.png[] possibility of synchronous execution (more on this later)
+* image:thumbs-up.png[] White-box testing (enables verification of calls from the system under test).
+* image:thumbs-up.png[] Simulation of any state, including failures, facilitating testing of corner cases.
+* image:thumbs-up.png[] Support synchronous execution (more details to follow).
 |
 |
 |===
@@ -565,8 +577,8 @@ image::vs.svg[]
 *Testcontainers*
 |
 [none]
-* image:thumbs-up.png[] Provide white-box testing (enables verification of calls from the system under test).
-* image:thumbs-up.png[] Allow simulation of any state, including failures, facilitating testing of corner cases.
+* image:thumbs-up.png[] White-box testing (enables verification of calls from the system under test).
+* image:thumbs-up.png[] Simulation of any state, including failures, facilitating testing of corner cases.
 * image:thumbs-up.png[] Support synchronous execution (more details to follow).
 |
 |
@@ -595,22 +607,26 @@ image::vs.svg[]
 |===
 
 
-== Example № 1. JedisMock and Call Verification
+== Story № 1. JedisMock and Call Verification
 
-https://github.com/fppt/jedis-mock
+image::redis.svg[]
 
-* reimplementation of Redis in Java (works at the network protocol level)
+== Mocks of Redis in various programming languages
 
-[source,java]
-----
-//This binds mock redis server to a random port
-RedisServer server = RedisServer
-        .newRedisServer()
-        .start();
+[cols="30a,40a,30a"]
+|===
+| Python | https://github.com/cunla/fakeredis-py[cunla/fakeredis-py] | 240 stars
+| NodeJS | https://github.com/yeahoffline/redis-mock[yeahoffline/redis-mock] | 210 stars
+| Java | https://github.com/fppt/jedis-mock[fppt/jedis-mock] | 151 stars
+|===
 
-//Jedis connection:
-Jedis jedis = new Jedis(server.getHost(), server.getBindPort());
-----
+== JedisMock
+
+* Reimplementation of Redis in pure Java (works at the network protocol level)
+* As of April 2024, supports 153 out of 237 commands (64%)
+
+image::supported_redis_operations.png[]
+
 
 == JedisMock
 
@@ -624,20 +640,34 @@ image::comparison.png[{image-60-width}]
 
 image::native_redis_tests.png[{image-60-width}]
 
-== JedisMock
-
-As of April 2024, supports 153 out of 237 commands (64%)
-
-image::supported_redis_operations.png[]
 
 == JedisMock
 
-Bugs (behavior differing from the real Redis) are constantly being fixed
+* Still behavior which is different from the real Redis is being constantly reported by users (and quickly  fixed)
 
 image::jedis_mock_bugs.png[{image-70-width}]
 
-== Why JedisMock is Needed
-A regular Maven dependency
+== Why mock if we have TestContainers?
+
+[source,java]
+----
+GenericContainer redis = new GenericContainer(
+        DockerImageName.parse("redis:5.0.3-alpine"))
+        .withExposedPorts(6379);
+
+String address = redis.getHost();
+Integer port = redis.getFirstMappedPort();
+
+underTest = new RedisBackedCache(address, port);
+----
+
+== JedisMock is a regular Maven dependency
+
+[source,kotlin]
+----
+//build.gradle.kts
+testImplementation("com.github.fppt:jedis-mock:1.1.1")
+----
 
 [source,java]
 ----
@@ -648,9 +678,13 @@ RedisServer server = RedisServer
 
 //Jedis connection:
 Jedis jedis = new Jedis(server.getHost(), server.getBindPort());
+//Lettuce connection:
+RedisClient redisClient = RedisClient
+        .create(String.format("redis://%s:%s",
+        server.getHost(), server.getBindPort()));
 ----
 
-== RedisCommandInterceptor
+== RedisCommandInterceptor: explicitly specified response
 
 [source,java]
 ----
@@ -667,7 +701,7 @@ RedisServer server = RedisServer.newRedisServer()
 ----
 
 
-== RedisCommandInterceptor
+== RedisCommandInterceptor: verification
 
 [source,java]
 ----
@@ -682,7 +716,7 @@ RedisServer server = RedisServer.newRedisServer()
 })).start();
 ----
 
-== RedisCommandInterceptor
+== RedisCommandInterceptor: failure simulation
 
 [source,java]
 ----
@@ -721,7 +755,15 @@ Caller -> "JedisMock": Request
 * image:index_up.png[] For most Redis testing tasks, TestContainers works.
 * image:index_up.png[] But if you want to verify the behavior of your own system or study it in situations when Redis itself fails -- JedisMock is helpful.
 
-== Example №2. Kafka Streams TopologyTestDriver and the Hell of Asynchronous Testing
+== Story №2. Kafka Streams TopologyTestDriver +++<br/>+++ and the Hell of Asynchronous Testing
+
+image::kafka_testing_deep_dive.png[{image-50-width}]
+
+https://www.youtube.com/watch?v=S_73iXJ50Yc
+
+https://www.confluent.io/blog/testing-kafka-streams/
+
+== Kafka Streams testing: possible options
 
 [cols="45a,10a,45a"]
 |===
@@ -732,34 +774,18 @@ digraph G {
 graph [ dpi = 180 ];
 rankdir="LR";
 node[shape=rectangle, style=rounded]
-Kafka;
-Kafka[shape="none",label="",image="src/main/asciidoc/images/kafka-logo.png"];
-
+TopologyTestDriver;
 }
 ----
 ^.^|image::vs.svg[]
 <.^|
-[graphviz]
-----
-digraph G {
-graph [ dpi = 180 ];
-rankdir="LR";
-node[shape=rectangle, style=rounded]
-TopologyTestDriver;
-}
-----
+image::testcontainers-logo.svg[]
 |===
-
-== Kafka streams testing: A deep dive (Joker 2020, online)
-
-image::kafka_testing_deep_dive.png[{image-70-width}]
-
-https://www.confluent.io/blog/testing-kafka-streams/
 
 == TopologyTestDriver
 
 [none]
-* image:thumbs-up.png[] Simple (just a regular dependency)
+* image:thumbs-up.png[] Simple (just a regular Maven dependency)
 * image:thumbs-up.png[] Fast
 * image:thumbs-up.png[] Convenient (good API for Arrange and Assert)
 
@@ -783,7 +809,7 @@ Works *asynchronously* in multiple threads on multiple containers
 == Thought Experiment: Limitations of Asynchronous Tests
 
 [none]
-* We entered "ping" and expect the system to return _a single_ response "pong".
+* We sent "ping" and expect the system to return _a single_ response "pong".
 
 [%step]
 [none]
@@ -799,7 +825,8 @@ Works *asynchronously* in multiple threads on multiple containers
 [source,java]
 ----
 //5 seconds?? maybe 6? maybe 4?
-while (!(records = consumer.poll(Duration.ofSeconds(5))).isEmpty()) {
+while (!(records =
+           consumer.poll(Duration.ofSeconds(5))).isEmpty()) {
     for (ConsumerRecord<String, String> rec : records) {
         values.add(rec.value());
     }
@@ -968,7 +995,8 @@ try {
   Awaitility.await().atMost(5, SECONDS)
            .until(() -> List.of("A", "B").equals(actual));
 } finally {
-    //We should not forget to finalize the execution even in case of errors!
+    //We should not forget to finalize the execution
+    //even in case of errors!
     consumingTask.cancel(true);
     service.awaitTermination(200, MILLISECONDS);
 }
@@ -982,9 +1010,9 @@ Assertions.assertEquals(List.of("A", "B"), values);
 
 == What's the pitfall??
 
-[%step]
-* synchronous nature and lack of caching lead to differences in behavior
-* it's possible to construct simple code examples that pass the "green" test on TTD, but operate completely incorrectly on a real cluster (refer to https://www.confluent.io/blog/testing-kafka-streams/)
+[none]
+* image:shrug.png[] synchronous nature and lack of caching lead to differences in behavior
+* image:shrug.png[] it's possible to construct simple code examples that pass the "green" test on TTD, but operate completely incorrectly on a real cluster (refer to https://www.confluent.io/blog/testing-kafka-streams/)
 
 == Conclusions on KafkaStreams:
 
@@ -993,9 +1021,30 @@ Assertions.assertEquals(List.of("A", "B"), values);
 * image:index_up.png[] You still can't do without the help of TopologyTestDriver
 * image:index_up.png[] But it's important to understand the limitations of this technology and aspects in which it doesn't work the same as a real cluster
 * image:shrug.png[] Failure on TTD means the code is bad. Successful execution on TTD doesn't mean the code is good.
-* image:index_up.png[] If necessary, a small number of tests are conducted on a containerized cluster.
+* image:index_up.png[] If necessary, a small number of tests must be conducted on a containerized Kafka cluster.
 
-== Story №3. Apache Beam: Mock as One of the Supported Backends
+== Story №3. Mock as One of the Supported Backends
+
+[graphviz]
+----
+digraph G {
+  graph [dpi = 200];
+  node[shape=rect,style=rounded];
+  {rank = same; A; B}
+  A[label="Client code"];
+  B[label="Abstraction"]
+
+  C[label="Backend 1"];
+  D[label="Backend 2"];
+  E[label="Mock Backend"; style="rounded,filled"; fillcolor="#ffffcc"];
+  A -> B;
+  B -> C[arrowhead=none];
+  B -> D[arrowhead=none];
+  B -> E[arrowhead=none];
+}
+----
+
+== Apache Beam
 
 image::beam_logo.png[{image-30-width}]
 
@@ -1038,26 +1087,7 @@ digraph G {
 
 `--runner=DirectRunner`
 |===
-== Mock Backend Pattern
 
-[graphviz]
-----
-digraph G {
-  graph [dpi = 200];
-  node[shape=rect,style=rounded];
-  {rank = same; A; B}
-  A[label="Client code"];
-  B[label="Abstraction"]
-
-  C[label="Backend 1"];
-  D[label="Backend 2"];
-  E[label="Mock Backend"; style="rounded,filled"; fillcolor="#ffffcc"];
-  A -> B;
-  B -> C[arrowhead=none];
-  B -> D[arrowhead=none];
-  B -> E[arrowhead=none];
-}
-----
 
 == Sets of Functional Capabilities
 
@@ -1099,7 +1129,7 @@ _"Direct Runner performs additional checks to ensure that users do not rely on s
 * image:shrug.png[] Successful execution on Direct Runner doesn't mean the code is good.
 * image:shrug.png[] How to test Google Cloud Dataflow without Google Cloud is beyond me.
 
-== Example №4. Celesta: Not rushing to give up on H2
+== Celesta
 
 [cols="30a,70a"]
 |===
@@ -1184,7 +1214,6 @@ image::comparison-celesta.png[{image-70-width}]
 
 [none]
 * Works on H2 => will work on PostgreSQL, MS SQL, etc.
-* Mock Backend the right way!
 
 [graphviz]
 ----
