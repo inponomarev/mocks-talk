@@ -73,7 +73,7 @@ digraph G {
   IS[label="Own\nService", style=invis]
   ES[label="External\nService", style=invis]
   Q1[label="Redis", style=invis, shape=cylinder]
-  Q2[label="Some\nCloud\nDatabase", style=invis, shape=cylinder]
+  Q2[label="Cloud\nDatabase", style=invis, shape=cylinder]
 }
 ----
 
@@ -100,7 +100,7 @@ digraph G {
   IS[label="Own\nService", style=invis]
   ES[label="External\nService", style=invis]
   Q1[label="Redis", style=invis, shape=cylinder]
-  Q2[label="Some\nCloud\nDatabase", style=invis, shape=cylinder]
+  Q2[label="Cloud\nDatabase", style=invis, shape=cylinder]
 }
 ----
 
@@ -128,7 +128,7 @@ digraph G {
   IS[label="Own\nService", style=invis]
   ES[label="External\nService", style=invis]
   Q1[label="Redis", style=invis, shape=cylinder]
-  Q2[label="Some\nCloud\nDatabase", style=invis, shape=cylinder]
+  Q2[label="Cloud\nDatabase", style=invis, shape=cylinder]
 }
 ----
 
@@ -155,7 +155,7 @@ digraph G {
   IS[label="Own\nService"]
   ES[label="External\nService", style=invis]
   Q1[label="Redis", style=invis, shape=cylinder]
-  Q2[label="Some\nCloud\nDatabase", style=invis, shape=cylinder]
+  Q2[label="Cloud\nDatabase", style=invis, shape=cylinder]
 }
 ----
 
@@ -182,7 +182,7 @@ digraph G {
   IS[label="Own\nService"]
   ES[label="External\nService"]
   Q1[label="Redis", style=invis, shape=cylinder]
-  Q2[label="Some\nCloud\nDatabase", style=invis, shape=cylinder]
+  Q2[label="Cloud\nDatabase", style=invis, shape=cylinder]
 }
 ----
 
@@ -209,7 +209,7 @@ digraph G {
   IS[label="Own\nService"]
   ES[label="External\nService"]
   Q1[label="Redis", shape=cylinder]
-  Q2[label="Some\nCloud\nDatabase", shape=cylinder]
+  Q2[label="Cloud\nDatabase", shape=cylinder]
 }
 ----
 
@@ -295,8 +295,8 @@ scale=1.5;
   Queue[label="Message\nbroker", shape=cylinder];
   IS[label="Own\nService"]
   ES[label="External\nService", style="filled"; fillcolor="#ffffcc"]
-  Q1[label="???"]
-  Q2[label="???"]
+  Q1[label="Redis"]
+  Q2[label="Cloud\nDatabase"]
 }
 ----
 
@@ -359,6 +359,9 @@ Mock--> Caller : Response
 
 == WireMock features
 
+image::wiremock.svg[]
+
+
 Verify calls to the service
 
 [plantuml]
@@ -373,6 +376,8 @@ Mock--> Caller : Response
 ----
 
 == WireMock features
+
+image::wiremock.svg[]
 
 "Spy" by intercepting calls to the real service
 
@@ -414,7 +419,7 @@ digraph G {
   IS[label="Own\nService"]
   ES[label="External\nService"]
   Q1[label="Redis", shape=cylinder, style="filled"; fillcolor="#ffffcc"]
-  Q2[label="Some\nCloud\nDatabase", shape=cylinder, style="filled"; fillcolor="#ffffcc"]
+  Q2[label="Cloud\nDatabase", shape=cylinder, style="filled"; fillcolor="#ffffcc"]
 }
 ----
 
@@ -800,7 +805,7 @@ image::vs.svg[]
 ^.^|
 *Real Kafka*
 |
-Works *synchronously* (single thread and event loop, like in a browser)
+Works *synchronously* (single thread and event loop)
 |
 |
 Works *asynchronously* in multiple threads on multiple containers
@@ -809,7 +814,7 @@ Works *asynchronously* in multiple threads on multiple containers
 == Thought Experiment: Limitations of Asynchronous Tests
 
 [none]
-* We sent "ping" and expect the system to return _a single_ response "pong".
+* We send "ping" and expect the system to return _a single_ response "pong".
 
 [%step]
 [none]
@@ -952,11 +957,11 @@ deactivate Awaitility
 == Awaitility DSL Capabilities
 
 [%step]
-* `atLeast` (should not happen before)
-* `atMost` (should not happen after)
+* `atLeast` (should not happen earlier)
+* `atMost` (should happen before expiration)
 * `during` (should occur throughout the interval)
-* polling period:
-** constant (1, 2, 3, 4...)
+* poll interval:
+** fixed (1, 1, 1, 1...)
 ** Fibonacci (1, 2, 3, 5...)
 ** exponential (1, 2, 4, 8...)
 * *Awaitility speeds up asynchronous tests but does not overcome the fundamental problem of asynchronous tests*
@@ -1018,10 +1023,11 @@ Assertions.assertEquals(List.of("A", "B"), values);
 
 [%step]
 [none]
-* image:index_up.png[] You still can't do without the help of TopologyTestDriver
-* image:index_up.png[] But it's important to understand the limitations of this technology and aspects in which it doesn't work the same as a real cluster
-* image:shrug.png[] Failure on TTD means the code is bad. Successful execution on TTD doesn't mean the code is good.
-* image:index_up.png[] If necessary, a small number of tests must be conducted on a containerized Kafka cluster.
+* image:index_up.png[] TopologyTestDriver (TTD) remains essential, despite its limitations.
+* image:index_up.png[] Understand that TTD may not fully mimic the behavior of a real Kafka cluster.
+* image:shrug.png[] A failure in TTD indicates problems in the code; however, passing tests in TTD do not guarantee code reliability.
+* image:index_up.png[] Conduct a limited number of tests on a containerized Kafka cluster when necessary.
+
 
 == Story №3. Mock as One of the Supported Backends
 
@@ -1234,16 +1240,39 @@ digraph G {
 }
 ----
 
-
 == In-Memory H2 Capabilities
 
 [%step]
 [none]
 * image:thumbs-up.png[] Starts with an empty database instantly
 * image:thumbs-up.png[] Migrates instantly
-* image:thumbs-up.png[] Incoming requests are easily traced +
+* image:thumbs-up.png[] Queries are easily traced +
 (`SET TRACE_LEVEL_SYSTEM_OUT 2`)
 * image:thumbs-up.png[] After the test, the state is "forgotten"
+
+== Using the spy JDBC Driver to trace SQL queries
+
+Instead of
+
+[source]
+jdbc:postgresql://host/database
+
+use
+
+[source]
+jdbc:log4jdbc:postgresql://host/database
+
+[plantuml]
+----
+@startuml
+skinparam dpi 260
+hide footbox
+Caller -> "Log4JDBC": Request
+"Log4JDBC" -> : Log the request
+"Log4JDBC" -> "JDBC driver": Request
+@enduml
+----
+
 
 == CelestaTest: Arrange
 
@@ -1320,31 +1349,6 @@ Approvals.verifyJson(new ObjectMapper()
 * image:thumbs-up.png[] Creates an empty database with the required structure for each test
 * image:thumbs-up.png[] Encourages writing a large number of tests for all database-related logic
 * image:shrug.png[] The price we pay is the limitation of functionality within what Celesta supports.
-
-== Using the spy JDBC Driver
-
-Instead of
-
-[source]
-jdbc:postgresql://host/database
-
-use
-
-[source]
-jdbc:log4jdbc:postgresql://host/database
-
-[plantuml]
-----
-@startuml
-skinparam dpi 260
-hide footbox
-Caller -> "Log4JDBC": Request
-"Log4JDBC" -> : Log the request
-"Log4JDBC" -> "JDBC driver": Request
-@enduml
-----
-
-
 
 
 == Conclusions on TestContainers
